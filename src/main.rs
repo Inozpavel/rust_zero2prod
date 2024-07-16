@@ -1,28 +1,22 @@
-use axum::Router;
-use axum::extract::{Path};
-use axum::http::StatusCode;
-use axum::routing::get;
 use tokio::net::TcpListener;
-use tracing::{info};
+use tracing::info;
 use tracing_subscriber::EnvFilter;
-
-async fn greet_for_name(Path(q): Path<String>) -> (StatusCode, String) {
-    (StatusCode::OK, format!("Hello, {}", q))
-}
+use zero2prod::config::AppConfig;
+use zero2prod::run;
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     let filter = EnvFilter::from(std::env::var("RUST_LOG").unwrap_or("INFO".into()));
     tracing_subscriber::fmt().with_env_filter(filter).init();
 
-    let listener = TcpListener::bind("127.0.0.1:8080").await?;
+    let config = AppConfig {
+        port: 8000,
+        host: "127.0.0.1".to_string(),
+    };
+
+    let address = format!("{}:{}", config.host, config.port);
+    let listener = TcpListener::bind(address).await?;
     info!("Listening http://{}", listener.local_addr()?);
 
-    let router = Router::new()
-        .route("/health", get(|| async {}))
-        .route("/:name", get(greet_for_name))
-        .into_make_service();
-    axum::serve(listener, router).await?;
-
-    Ok(())
+    run(listener).await
 }
