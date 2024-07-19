@@ -29,6 +29,9 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    env:
+      SQLX_OFFLINE_DIR: .sqlx
+
     steps:
       - uses: actions/checkout@v4
       - name: Build
