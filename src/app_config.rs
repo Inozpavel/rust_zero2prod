@@ -58,5 +58,6 @@ pub fn get_app_configuration() -> Result<AppConfig, anyhow::Error> {
         .context("Deserialize app config")?;
 
     info!("Config: {:?} ", app_config);
+
     Ok(app_config)
 }
