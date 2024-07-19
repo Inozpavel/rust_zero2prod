@@ -14,6 +14,7 @@ pub struct SubscribeFormData {
     email: String,
 }
 
+#[tracing::instrument(skip(app_state))]
 pub async fn subscribe(
     app_state: State<Arc<AppState>>,
     Form(form): Form<SubscribeFormData>,
@@ -33,5 +34,6 @@ pub async fn subscribe(
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", e)))?;
 
     info!("New subscription!");
+
     Ok(())
 }
