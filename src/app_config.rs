@@ -9,6 +9,19 @@ pub struct AppConfig {
     pub database: DatabaseConfig,
 }
 
+impl AppConfig {
+    pub fn database_connection_string(&self) -> String {
+        format!(
+            "postgres://{}:{}@{}:{}/{}",
+            self.database.username,
+            self.database.password,
+            self.database.host,
+            self.database.port,
+            self.database.database_name
+        )
+    }
+}
+
 #[derive(Deserialize, Debug)]
 pub struct DatabaseConfig {
     pub username: String,
@@ -19,10 +32,17 @@ pub struct DatabaseConfig {
 }
 
 impl DatabaseConfig {
-    pub fn build_postgres_connection_string(&self) -> String {
+    pub fn database_connection_string(&self) -> String {
         format!(
             "postgres://{}:{}@{}:{}/{}",
             self.username, self.password, self.host, self.port, self.database_name
+        )
+    }
+
+    pub fn database_connection_string_without_db(&self) -> String {
+        format!(
+            "postgres://{}:{}@{}:{}",
+            self.username, self.password, self.host, self.port
         )
     }
 }

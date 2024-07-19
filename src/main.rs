@@ -1,12 +1,15 @@
+use sqlx::PgPool;
 use tokio::net::TcpListener;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 use zero2prod::app_config::get_app_configuration;
+use zero2prod::app_state::AppState;
 use zero2prod::run;
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
-    let filter = EnvFilter::from(std::env::var("RUST_LOG").unwrap_or("INFO".into()));
+    let log_level = std::env::var("RUST_LOG").unwrap_or("trace".into());
+    let filter = EnvFilter::builder().parse(log_level)?;
     tracing_subscriber::fmt().with_env_filter(filter).init();
 
     let config = get_app_configuration()?;
@@ -15,5 +18,8 @@ async fn main() -> Result<(), anyhow::Error> {
     let listener = TcpListener::bind(address).await?;
     info!("Listening http://{}", listener.local_addr()?);
 
-    run(config, listener).await
+    let pool = PgPool::connect(&config.database.database_connection_string()).await?;
+    let state = AppState { database: pool };
+
+    run(state, config, listener).await
 }

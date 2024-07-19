@@ -31,6 +31,7 @@ pub async fn subscribe(
     .execute(&app_state.database)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", e)))?;
-    info!("Form: {:?}", form);
+
+    info!("New subscription!");
     Ok(())
 }
