@@ -28,14 +28,14 @@ pub async fn run(
         .layer(
             tower_http::trace::TraceLayer::new_for_http()
                 .make_span_with(|req: &Request<Body>| {
-                    let req_id = req.headers()
+                    let req_id = req
+                        .headers()
                         .get("x-request-id")
-                        .map(|v| v.to_str()
-                            .unwrap_or("invalid UTF-8"))
+                        .map(|v| v.to_str().unwrap_or("invalid UTF-8"))
                         .unwrap_or("None");
                     info_span!("http-request", method = ?req.method(), uri = ?req.uri(), ?req_id)
                 })
-                .on_response(DefaultOnResponse::new().level(tracing::Level::INFO))
+                .on_response(DefaultOnResponse::new().level(tracing::Level::INFO)),
         )
         .layer(axum::middleware::from_fn(override_code))
         .layer(tower_http::request_id::PropagateRequestIdLayer::x_request_id())
