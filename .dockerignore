@@ -1,0 +1,7 @@
+target/
+.env
+.dockerignore
+Cargo.lock
+docker-compose.yaml
+tests
+.github
