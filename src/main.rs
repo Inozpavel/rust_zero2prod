@@ -16,7 +16,17 @@ async fn main() -> Result<(), anyhow::Error> {
 
     let address = format!("{}:{}", config.host, config.port);
     let listener = TcpListener::bind(address).await?;
-    info!("Listening http://{}", listener.local_addr()?);
+
+    let addr = listener.local_addr()?;
+    if addr.ip().is_unspecified() {
+        info!(
+            "Listening http://{}. For debug use: http://127.0.0.1:{}",
+            addr,
+            addr.port()
+        );
+    } else {
+        info!("Listening http://{}", listener.local_addr()?);
+    }
 
     let pool = PgPool::connect(&config.database.database_connection_string()).await?;
     let state = AppState { database: pool };

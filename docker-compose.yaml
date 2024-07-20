@@ -8,3 +8,11 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: newsletter
     restart: always
+
+  zero2prod:
+    image: zero2prod-ubuntu-2-layers-bookworm-slim
+    environment:
+      APP__PORT: 80
+      APP__DATABASE__HOST: postgres
+    ports:
+      - 8001:80
