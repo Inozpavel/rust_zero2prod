@@ -29,8 +29,7 @@ async fn main() -> Result<(), anyhow::Error> {
         info!("Listening http://{}", listener.local_addr()?);
     }
 
-    let connect_options =
-        PgConnectOptions::from_str(&config.database.database_connection_string())?;
+    let connect_options = config.database.with_database_name();
     let pool = PgPoolOptions::new().connect_with(connect_options).await?;
 
     let state = AppState { database: pool };

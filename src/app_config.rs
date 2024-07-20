@@ -1,5 +1,6 @@
 use anyhow::Context;
 use serde::Deserialize;
+use sqlx::postgres::{PgConnectOptions, PgSslMode};
 use strum_macros::{Display, EnumString};
 use tracing::info;
 
@@ -23,19 +24,6 @@ pub struct AppConfig {
     pub database: DatabaseConfig,
 }
 
-impl AppConfig {
-    pub fn database_connection_string(&self) -> String {
-        format!(
-            "postgres://{}:{}@{}:{}/{}",
-            self.database.username,
-            self.database.password,
-            self.database.host,
-            self.database.port,
-            self.database.database_name
-        )
-    }
-}
-
 #[derive(Deserialize, Debug)]
 pub struct DatabaseConfig {
     pub username: String,
@@ -43,21 +31,26 @@ pub struct DatabaseConfig {
     pub port: u16,
     pub host: String,
     pub database_name: String,
+    pub require_ssl: bool,
 }
 
 impl DatabaseConfig {
-    pub fn database_connection_string(&self) -> String {
-        format!(
-            "postgres://{}:{}@{}:{}/{}",
-            self.username, self.password, self.host, self.port, self.database_name
-        )
+    pub fn without_database_name(&self) -> PgConnectOptions {
+        let ssl_mode = if self.require_ssl {
+            PgSslMode::Require
+        } else {
+            PgSslMode::Prefer
+        };
+        PgConnectOptions::new()
+            .username(&self.username)
+            .password(&self.password)
+            .host(&self.host)
+            .port(self.port)
+            .ssl_mode(ssl_mode)
     }
 
-    pub fn database_connection_string_without_db(&self) -> String {
-        format!(
-            "postgres://{}:{}@{}:{}",
-            self.username, self.password, self.host, self.port
-        )
+    pub fn with_database_name(&self) -> PgConnectOptions {
+        self.without_database_name().database(&self.database_name)
     }
 }
 
