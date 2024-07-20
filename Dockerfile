@@ -4,6 +4,13 @@ ENV SQLX_OFFLINE_DIR=.sqlx
 
 WORKDIR /code
 
+COPY ./Cargo.toml ./Cargo.toml
+COPY ./Cargo.lock ./Cargo.lock
+
+RUN mkdir src && touch ./src/main.rs
+
+RUN cargo fetch --locked
+
 COPY . .
 
 RUN cargo b -r

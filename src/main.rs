@@ -1,4 +1,5 @@
-use sqlx::PgPool;
+use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
+use std::str::FromStr;
 use tokio::net::TcpListener;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
@@ -28,7 +29,10 @@ async fn main() -> Result<(), anyhow::Error> {
         info!("Listening http://{}", listener.local_addr()?);
     }
 
-    let pool = PgPool::connect(&config.database.database_connection_string()).await?;
+    let connect_options =
+        PgConnectOptions::from_str(&config.database.database_connection_string())?;
+    let pool = PgPoolOptions::new().connect_with(connect_options).await?;
+
     let state = AppState { database: pool };
 
     run(state, config, listener).await
