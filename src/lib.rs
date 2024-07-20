@@ -15,6 +15,7 @@ use tracing::info_span;
 
 pub mod app_config;
 pub mod app_state;
+pub mod domain;
 pub mod routes;
 
 pub async fn run(

@@ -1,11 +1,13 @@
 use crate::app_state::AppState;
+use crate::domain::{NewSubscriber, SubscriberName};
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Form;
 use chrono::Utc;
 use serde::Deserialize;
+use sqlx::PgPool;
 use std::sync::Arc;
-use tracing::info;
+use tracing::{error, info};
 use uuid::Uuid;
 
 #[derive(Deserialize, Debug)]
@@ -19,21 +21,37 @@ pub async fn subscribe(
     app_state: State<Arc<AppState>>,
     Form(form): Form<SubscribeFormData>,
 ) -> Result<(), (StatusCode, String)> {
+    let subscriber = NewSubscriber {
+        email: form.email,
+        name: SubscriberName::parse(form.name).map_err(|e| (StatusCode::BAD_REQUEST, e))?,
+    };
+
+    insert_subscriber(&app_state.database, &subscriber)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", e)))?;
+
+    info!("New subscription!");
+
+    Ok(())
+}
+#[tracing::instrument(skip_all)]
+async fn insert_subscriber(pool: &PgPool, subscriber: &NewSubscriber) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
     INSERT INTO subscriptions (id, name, email, subscribed_at)
     VALUES ($1,$2,$3,$4)
     "#,
         Uuid::now_v7(),
-        form.name,
-        form.email,
+        subscriber.name.as_ref(),
+        subscriber.email,
         Utc::now(),
     )
-    .execute(&app_state.database)
+    .execute(pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", e)))?;
-
-    info!("New subscription!");
+    .map_err(|e| {
+        error!("Failed to execute query {:?}", e);
+        e
+    })?;
 
     Ok(())
 }
