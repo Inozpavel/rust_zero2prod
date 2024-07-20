@@ -1,9 +1,23 @@
 use anyhow::Context;
 use serde::Deserialize;
+use strum_macros::{Display, EnumString};
 use tracing::info;
+
+#[derive(Debug, Default, Eq, PartialEq, EnumString, Display)]
+pub enum AppEnvironment {
+    #[default]
+    Local,
+    Development,
+    Staging,
+    Production,
+    Testing,
+}
 
 #[derive(Deserialize, Debug)]
 pub struct AppConfig {
+    #[serde(skip)]
+    pub environment: AppEnvironment,
+
     pub port: u16,
     pub host: String,
     pub database: DatabaseConfig,
@@ -48,14 +62,25 @@ impl DatabaseConfig {
 }
 
 pub fn get_app_configuration() -> Result<AppConfig, anyhow::Error> {
+    let environment = std::env::var("APP_ENVIRONMENT")
+        .unwrap_or(format!("{}", AppEnvironment::Local))
+        .parse::<AppEnvironment>()
+        .context("App environment detection")?;
+
     let config = config::Config::builder()
         .add_source(config::File::with_name("configuration"))
+        .add_source(
+            config::File::with_name(&format!("configuration.{}", environment)).required(false),
+        )
+        .add_source(config::Environment::with_prefix("APP").separator("__"))
         .build()
         .context("Build app config")?;
 
-    let app_config = config
+    let mut app_config = config
         .try_deserialize::<AppConfig>()
         .context("Deserialize app config")?;
+
+    app_config.environment = environment;
 
     info!("Config: {:?} ", app_config);
 
