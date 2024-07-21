@@ -2,6 +2,7 @@ use crate::app_config::{AppConfig, DatabaseConfig};
 use crate::app_state::AppState;
 use crate::domain::value_objects::SubscriberEmail;
 use crate::email_client::EmailClient;
+use crate::routes::confirm_subscription::confirm_subscription;
 use crate::routes::subscribe::subscribe;
 use anyhow::anyhow;
 use axum::body::Body;
@@ -18,7 +19,6 @@ use std::time::Duration;
 use tokio::net::TcpListener;
 use tower_http::trace::DefaultOnResponse;
 use tracing::{info, info_span};
-use crate::routes::confirm_subscription::confirm_subscription;
 
 pub async fn build(config: &AppConfig) -> Result<(TcpListener, AppState), anyhow::Error> {
     let db_pool = get_database_pool(&config.database).await?;
