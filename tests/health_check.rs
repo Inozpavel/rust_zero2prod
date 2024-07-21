@@ -1,12 +1,8 @@
+use crate::helpers::{spawn_app, TestApp};
 use maplit::hashmap;
-use sqlx::{Connection, Executor, PgConnection, PgPool};
-use std::sync::Once;
-use tokio::net::TcpListener;
-use tracing::info;
-use tracing_subscriber::EnvFilter;
-use uuid::Uuid;
-use zero2prod::app_config::{get_app_configuration, AppConfig};
-use zero2prod::app_state::AppState;
+use sqlx::Executor;
+
+mod helpers;
 
 #[tokio::test]
 async fn health_check_works() -> Result<(), anyhow::Error> {
@@ -75,58 +71,34 @@ async fn subscribe_returns_400_when_data_is_missing() -> Result<(), anyhow::Erro
     Ok(())
 }
 
-async fn spawn_app() -> Result<TestApp, anyhow::Error> {
-    static INIT: Once = Once::new();
+#[tokio::test]
+async fn subscribe_returns_a_400_when_fields_are_present_but_invalid() -> Result<(), anyhow::Error>
+{
+    let app = spawn_app().await?;
+    let client = reqwest::Client::new();
+    let test_cases = vec![
+        ("name=&email=ursula_le_guin%40gmail.com", "empty name"),
+        ("name=Ursula&email=", "empty email"),
+        ("name=Ursula&email=definitely-not-an-email", "invalid email"),
+    ];
 
-    INIT.call_once(|| {
-        let filter = EnvFilter::from(std::env::var("RUST_LOG").unwrap_or("INFO".into()));
-        tracing_subscriber::fmt().with_env_filter(filter).init()
-    });
+    for (body, description) in test_cases {
+        let response = client
+            .post(&format!("{}/subscribe", &app.base_address))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(body)
+            .send()
+            .await
+            .expect("Failed to execute request.");
 
-    let mut configuration = build_test_app_config()?;
-    configuration.database.database_name = Uuid::now_v7().to_string();
+        assert_eq!(
+            400,
+            response.status().as_u16(),
+            "The API did not return a 400 Bad Request when the payload was {}. Body: {}",
+            description,
+            response.text().await?
+        );
+    }
 
-    let address = format!("{}:{}", configuration.host, configuration.port);
-    let listener = TcpListener::bind(&address).await?;
-    let given_port = listener.local_addr()?.port();
-
-    info!("Listening http://{}", listener.local_addr()?);
-
-    let pool = configure_database(&configuration).await?;
-    let state = AppState {
-        database: pool.clone(),
-    };
-    _ = tokio::task::spawn(zero2prod::run(state, configuration, listener));
-
-    let base_address = format!("http://127.0.0.1:{}", given_port);
-    let result = TestApp { base_address, pool };
-
-    Ok(result)
-}
-
-async fn configure_database(config: &AppConfig) -> Result<PgPool, anyhow::Error> {
-    let mut connection =
-        PgConnection::connect_with(&config.database.without_database_name()).await?;
-
-    let sql = format!(r#"CREATE DATABASE "{}";"#, config.database.database_name);
-    connection.execute(sql.as_str()).await?;
-
-    let pool_connection_options = config.database.with_database_name();
-    let pool = PgPool::connect_with(pool_connection_options).await?;
-
-    sqlx::migrate!("./migrations").run(&pool).await?;
-
-    Ok(pool)
-}
-
-fn build_test_app_config() -> Result<AppConfig, anyhow::Error> {
-    let mut config = get_app_configuration()?;
-    config.port = 0;
-
-    Ok(config)
-}
-
-pub struct TestApp {
-    base_address: String,
-    pool: PgPool,
+    Ok(())
 }
