@@ -1,14 +1,14 @@
-use crate::helpers::{spawn_app, TestApp};
 use maplit::hashmap;
-use sqlx::Executor;
+
+use crate::helpers::spawn_app;
 
 mod helpers;
 
 #[tokio::test]
 async fn health_check_works() -> Result<(), anyhow::Error> {
-    let TestApp { base_address, .. } = spawn_app().await?;
+    let app = spawn_app().await?;
 
-    let url = format!("{}/health", base_address);
+    let url = format!("{}/health", app.base_address);
     let response = reqwest::get(url).await?;
 
     assert!(response.status().is_success());
@@ -18,15 +18,13 @@ async fn health_check_works() -> Result<(), anyhow::Error> {
 
 #[tokio::test]
 async fn subscribe_returns_200_for_valid_data() -> Result<(), anyhow::Error> {
-    let TestApp { base_address, pool } = spawn_app().await?;
-    let url = format!("{}/subscriptions", base_address);
+    let app = spawn_app().await?;
 
     let form = hashmap! {
         "name" => "Le Guin",
         "email" =>"ursula_le_guin@gmail.com"
     };
-    let client = reqwest::Client::new();
-    let response = client.post(&url).form(&form).send().await?;
+    let response = app.post_subscriptions(&form).await?;
 
     assert!(
         response.status().is_success(),
@@ -35,7 +33,7 @@ async fn subscribe_returns_200_for_valid_data() -> Result<(), anyhow::Error> {
     );
 
     let saved = sqlx::query!("SELECT email,name FROM subscriptions")
-        .fetch_one(&pool)
+        .fetch_one(&app.pool)
         .await?;
 
     assert_eq!(saved.email, "ursula_le_guin@gmail.com");
@@ -45,11 +43,8 @@ async fn subscribe_returns_200_for_valid_data() -> Result<(), anyhow::Error> {
 
 #[tokio::test]
 async fn subscribe_returns_400_when_data_is_missing() -> Result<(), anyhow::Error> {
-    let TestApp {
-        base_address: address,
-        ..
-    } = spawn_app().await?;
-    let url = format!("{}/subscriptions", address);
+    let app = spawn_app().await?;
+    let url = format!("{}/subscriptions", app.base_address);
 
     let test_cases = [
         hashmap! {},
@@ -75,21 +70,20 @@ async fn subscribe_returns_400_when_data_is_missing() -> Result<(), anyhow::Erro
 async fn subscribe_returns_a_400_when_fields_are_present_but_invalid() -> Result<(), anyhow::Error>
 {
     let app = spawn_app().await?;
-    let client = reqwest::Client::new();
     let test_cases = vec![
-        ("name=&email=ursula_le_guin%40gmail.com", "empty name"),
-        ("name=Ursula&email=", "empty email"),
-        ("name=Ursula&email=definitely-not-an-email", "invalid email"),
+        (
+            hashmap! { "name" => "", "email" => "ursula_le_guin@gmail.com"},
+            "empty name",
+        ),
+        (hashmap! { "name" => "Ursula", "email" => ""}, "empty email"),
+        (
+            hashmap! { "name" => "Ursula","email" => "definitely-not-an-email"},
+            "empty name",
+        ),
     ];
 
-    for (body, description) in test_cases {
-        let response = client
-            .post(&format!("{}/subscriptions", &app.base_address))
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(body)
-            .send()
-            .await
-            .expect("Failed to execute request.");
+    for (form, description) in test_cases {
+        let response = app.post_subscriptions(&form).await?;
 
         assert_eq!(
             400,

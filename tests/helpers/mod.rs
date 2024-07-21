@@ -1,4 +1,6 @@
+use reqwest::Response;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
+use std::collections::HashMap;
 use std::sync::Once;
 use tracing_subscriber::EnvFilter;
 use uuid::Uuid;
@@ -8,6 +10,19 @@ use zero2prod::startup::{build, get_database_pool};
 pub struct TestApp {
     pub base_address: String,
     pub pool: PgPool,
+    client: reqwest::Client,
+}
+
+impl TestApp {
+    pub async fn post_subscriptions(
+        &self,
+        map: &HashMap<&str, &str>,
+    ) -> Result<Response, reqwest::Error> {
+        let url = format!("{}/subscriptions", self.base_address);
+        let response = self.client.post(&url).form(&map).send().await?;
+
+        Ok(response)
+    }
 }
 
 pub async fn spawn_app() -> Result<TestApp, anyhow::Error> {
@@ -34,7 +49,11 @@ pub async fn spawn_app() -> Result<TestApp, anyhow::Error> {
     ));
 
     let base_address = format!("http://127.0.0.1:{}", given_port);
-    let result = TestApp { base_address, pool };
+    let result = TestApp {
+        base_address,
+        pool,
+        client: reqwest::Client::new(),
+    };
 
     Ok(result)
 }
