@@ -7,3 +7,4 @@ host = "127.0.0.1"
 username = "postgres"
 password = "postgres"
 database_name = "newsletter"
+require_ssl = false

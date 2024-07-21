@@ -1,5 +1,5 @@
 use crate::app_state::AppState;
-use crate::domain::{NewSubscriber, SubscriberName};
+use crate::domain::value_objects::{NewSubscriber, SubscriberEmail, SubscriberName};
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Form;
@@ -22,7 +22,7 @@ pub async fn subscribe(
     Form(form): Form<SubscribeFormData>,
 ) -> Result<(), (StatusCode, String)> {
     let subscriber = NewSubscriber {
-        email: form.email,
+        email: SubscriberEmail::parse(form.email).map_err(|e| (StatusCode::BAD_REQUEST, e))?,
         name: SubscriberName::parse(form.name).map_err(|e| (StatusCode::BAD_REQUEST, e))?,
     };
 
@@ -43,7 +43,7 @@ async fn insert_subscriber(pool: &PgPool, subscriber: &NewSubscriber) -> Result<
     "#,
         Uuid::now_v7(),
         subscriber.name.as_ref(),
-        subscriber.email,
+        subscriber.email.as_ref(),
         Utc::now(),
     )
     .execute(pool)

@@ -1,5 +1,4 @@
-use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
-use std::str::FromStr;
+use sqlx::postgres::PgPoolOptions;
 use tokio::net::TcpListener;
 use tracing::info;
 use tracing_subscriber::EnvFilter;

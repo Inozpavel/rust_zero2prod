@@ -106,13 +106,13 @@ async fn spawn_app() -> Result<TestApp, anyhow::Error> {
 
 async fn configure_database(config: &AppConfig) -> Result<PgPool, anyhow::Error> {
     let mut connection =
-        PgConnection::connect(&config.database.database_connection_string_without_db()).await?;
+        PgConnection::connect_with(&config.database.without_database_name()).await?;
 
     let sql = format!(r#"CREATE DATABASE "{}";"#, config.database.database_name);
     connection.execute(sql.as_str()).await?;
 
-    let pool_connection = config.database.database_connection_string();
-    let pool = PgPool::connect(&pool_connection).await?;
+    let pool_connection_options = config.database.with_database_name();
+    let pool = PgPool::connect_with(pool_connection_options).await?;
 
     sqlx::migrate!("./migrations").run(&pool).await?;
 
