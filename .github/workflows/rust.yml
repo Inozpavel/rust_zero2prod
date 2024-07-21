@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  SQLX_OFFLINE_DIR: .sqlx
 
 jobs:
   check:
@@ -28,9 +29,6 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-
-    env:
-      SQLX_OFFLINE_DIR: .sqlx
 
     steps:
       - uses: actions/checkout@v4
