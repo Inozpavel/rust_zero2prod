@@ -19,7 +19,7 @@ async fn health_check_works() -> Result<(), anyhow::Error> {
 #[tokio::test]
 async fn subscribe_returns_200_for_valid_data() -> Result<(), anyhow::Error> {
     let TestApp { base_address, pool } = spawn_app().await?;
-    let url = format!("{}/subscribe", base_address);
+    let url = format!("{}/subscriptions", base_address);
 
     let form = hashmap! {
         "name" => "Le Guin",
@@ -49,7 +49,7 @@ async fn subscribe_returns_400_when_data_is_missing() -> Result<(), anyhow::Erro
         base_address: address,
         ..
     } = spawn_app().await?;
-    let url = format!("{}/subscribe", address);
+    let url = format!("{}/subscriptions", address);
 
     let test_cases = [
         hashmap! {},
@@ -84,7 +84,7 @@ async fn subscribe_returns_a_400_when_fields_are_present_but_invalid() -> Result
 
     for (body, description) in test_cases {
         let response = client
-            .post(&format!("{}/subscribe", &app.base_address))
+            .post(&format!("{}/subscriptions", &app.base_address))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(body)
             .send()

@@ -1,7 +1,6 @@
 use tracing_subscriber::EnvFilter;
 use zero2prod::app_config::get_app_configuration;
-use zero2prod::run;
-use zero2prod::startup::build;
+use zero2prod::startup::{build, run_until_stopped};
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
@@ -13,5 +12,5 @@ async fn main() -> Result<(), anyhow::Error> {
 
     let (listener, state) = build(&config).await?;
 
-    run(state, config, listener).await
+    run_until_stopped(state, config, listener).await
 }

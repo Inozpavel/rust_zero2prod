@@ -3,7 +3,7 @@ use std::sync::Once;
 use tracing_subscriber::EnvFilter;
 use uuid::Uuid;
 use zero2prod::app_config::{get_app_configuration, AppConfig};
-use zero2prod::startup::build;
+use zero2prod::startup::{build, get_database_pool};
 
 pub struct TestApp {
     pub base_address: String,
@@ -18,16 +18,20 @@ pub async fn spawn_app() -> Result<TestApp, anyhow::Error> {
         tracing_subscriber::fmt().with_env_filter(filter).init()
     });
 
-    let mut configuration = build_test_app_config()?;
-    configuration.database.database_name = Uuid::now_v7().to_string();
+    let configuration = build_test_app_config()?;
 
     let (listener, state) = build(&configuration).await?;
 
-    let pool = state.database.clone();
     let given_port = listener.local_addr()?.port();
 
     configure_database(&configuration).await?;
-    _ = tokio::task::spawn(zero2prod::run(state, configuration, listener));
+
+    let pool = state.database.clone();
+    _ = tokio::task::spawn(zero2prod::startup::run_until_stopped(
+        state,
+        configuration,
+        listener,
+    ));
 
     let base_address = format!("http://127.0.0.1:{}", given_port);
     let result = TestApp { base_address, pool };
@@ -42,8 +46,7 @@ async fn configure_database(config: &AppConfig) -> Result<PgPool, anyhow::Error>
     let sql = format!(r#"CREATE DATABASE "{}";"#, config.database.database_name);
     connection.execute(sql.as_str()).await?;
 
-    let pool_connection_options = config.database.with_database_name();
-    let pool = PgPool::connect_with(pool_connection_options).await?;
+    let pool = get_database_pool(&config.database).await?;
 
     sqlx::migrate!("./migrations").run(&pool).await?;
 
