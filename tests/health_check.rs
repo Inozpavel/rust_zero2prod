@@ -1,6 +1,6 @@
-use maplit::hashmap;
-
 use crate::helpers::spawn_app;
+use maplit::hashmap;
+use zero2prod::domain::value_objects::ConfirmationStatus;
 
 mod helpers;
 
@@ -32,12 +32,16 @@ async fn subscribe_returns_200_for_valid_data() -> Result<(), anyhow::Error> {
         response.status()
     );
 
-    let saved = sqlx::query!("SELECT email,name FROM subscriptions")
+    let saved = sqlx::query!("SELECT email,name,status FROM subscriptions")
         .fetch_one(&app.pool)
         .await?;
 
     assert_eq!(saved.email, "ursula_le_guin@gmail.com");
     assert_eq!(saved.name, "Le Guin");
+    assert_eq!(
+        saved.status,
+        ConfirmationStatus::PendingConfirmation.as_ref()
+    );
     Ok(())
 }
 

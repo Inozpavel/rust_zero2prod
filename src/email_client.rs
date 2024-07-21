@@ -25,7 +25,7 @@ impl EmailClient {
     }
     pub async fn send(
         &self,
-        recipient: SubscriberEmail,
+        recipient: &SubscriberEmail,
         subject: &str,
         html_content: &str,
         text_content: &str,

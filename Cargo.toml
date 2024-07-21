@@ -21,7 +21,7 @@ strum_macros = "0.26.4"
 strum = "0.26.3"
 validator = "0.18.1"
 reqwest = { version = "0.12.5", features = ["multipart", "json"] }
-
+rand = { version = "0.8.5" }
 [dev-dependencies]
 const_format = "0.2.32"
 fake = "2.9.2"
