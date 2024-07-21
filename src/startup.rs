@@ -18,6 +18,7 @@ use std::time::Duration;
 use tokio::net::TcpListener;
 use tower_http::trace::DefaultOnResponse;
 use tracing::{info, info_span};
+use crate::routes::confirm_subscription::confirm_subscription;
 
 pub async fn build(config: &AppConfig) -> Result<(TcpListener, AppState), anyhow::Error> {
     let db_pool = get_database_pool(&config.database).await?;
@@ -69,6 +70,7 @@ pub async fn run_until_stopped(
     let router = Router::new()
         .route("/health", get(|| async {}))
         .route("/subscriptions", post(subscribe))
+        .route("/subscriptions/confirm", post(confirm_subscription))
         .layer(
             tower_http::trace::TraceLayer::new_for_http()
                 .make_span_with(|req: &Request<Body>| {
