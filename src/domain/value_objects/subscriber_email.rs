@@ -1,3 +1,4 @@
+#[derive(Debug, Eq, PartialEq)]
 pub struct SubscriberEmail(String);
 
 impl SubscriberEmail {

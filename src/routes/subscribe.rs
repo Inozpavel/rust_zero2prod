@@ -34,17 +34,25 @@ pub async fn subscribe(
 
     Ok(())
 }
+
+#[derive(Debug)]
+enum EmailStatus {
+    Confirmed,
+    Unconfirmed,
+}
+
 #[tracing::instrument(skip_all)]
 async fn insert_subscriber(pool: &PgPool, subscriber: &NewSubscriber) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
-    INSERT INTO subscriptions (id, name, email, subscribed_at)
-    VALUES ($1,$2,$3,$4)
+    INSERT INTO subscriptions (id, name, email, subscribed_at, status)
+    VALUES ($1,$2,$3,$4,$5)
     "#,
         Uuid::now_v7(),
         subscriber.name.as_ref(),
         subscriber.email.as_ref(),
         Utc::now(),
+        format!("{:?}", EmailStatus::Confirmed)
     )
     .execute(pool)
     .await

@@ -22,6 +22,14 @@ pub struct AppConfig {
     pub port: u16,
     pub host: String,
     pub database: DatabaseConfig,
+    pub email_client: EmailClientConfig,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct EmailClientConfig {
+    pub base_url: String,
+    pub sender_email: String,
+    pub authorization_token: String,
 }
 
 #[derive(Deserialize, Debug)]

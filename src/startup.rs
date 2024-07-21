@@ -1,6 +1,9 @@
 use crate::app_config::{AppConfig, DatabaseConfig};
 use crate::app_state::AppState;
+use crate::domain::value_objects::SubscriberEmail;
+use crate::email_client::EmailClient;
 use crate::routes::subscribe::subscribe;
+use anyhow::anyhow;
 use axum::body::Body;
 use axum::extract::Request;
 use axum::http::StatusCode;
@@ -19,9 +22,17 @@ use tracing::{info, info_span};
 pub async fn build(config: &AppConfig) -> Result<(TcpListener, AppState), anyhow::Error> {
     let db_pool = get_database_pool(&config.database).await?;
 
+    sqlx::migrate!().run(&db_pool).await?;
+
     let address = format!("{}:{}", config.host, config.port);
     let listener = TcpListener::bind(address).await?;
 
+    let email_client = EmailClient::new(
+        config.email_client.base_url.to_string(),
+        config.email_client.authorization_token.to_string(),
+        SubscriberEmail::parse(config.email_client.sender_email.to_string())
+            .map_err(|e| anyhow!(e))?,
+    );
     let addr = listener.local_addr()?;
     if addr.ip().is_unspecified() {
         info!(
@@ -33,7 +44,10 @@ pub async fn build(config: &AppConfig) -> Result<(TcpListener, AppState), anyhow
         info!("Listening http://{}", listener.local_addr()?);
     }
 
-    let state = AppState { database: db_pool };
+    let state = AppState {
+        database: db_pool,
+        email_client,
+    };
     Ok((listener, state))
 }
 
