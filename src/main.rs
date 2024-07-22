@@ -10,7 +10,7 @@ async fn main() -> Result<(), anyhow::Error> {
 
     let config = get_app_configuration()?;
 
-    let (listener, state) = build(&config).await?;
+    let (listener, state) = build(config).await?;
 
-    run_until_stopped(state, config, listener).await
+    run_until_stopped(state, listener).await
 }

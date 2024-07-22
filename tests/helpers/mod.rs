@@ -36,16 +36,12 @@ pub async fn spawn_app() -> Result<TestApp, anyhow::Error> {
     let configuration = build_test_app_config()?;
     configure_database(&configuration).await?;
 
-    let (listener, state) = build(&configuration).await?;
+    let (listener, state) = build(configuration).await?;
 
     let given_port = listener.local_addr()?.port();
 
     let pool = state.database.clone();
-    _ = tokio::task::spawn(zero2prod::startup::run_until_stopped(
-        state,
-        configuration,
-        listener,
-    ));
+    _ = tokio::task::spawn(zero2prod::startup::run_until_stopped(state, listener));
 
     let base_address = format!("http://127.0.0.1:{}", given_port);
     let result = TestApp {

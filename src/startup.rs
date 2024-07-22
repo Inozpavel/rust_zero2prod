@@ -48,7 +48,7 @@ pub async fn build(config: AppConfig) -> Result<(TcpListener, AppState), anyhow:
     let state = AppState {
         database: db_pool,
         email_client,
-        config
+        config,
     };
     Ok((listener, state))
 }
