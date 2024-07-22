@@ -20,7 +20,7 @@ use tokio::net::TcpListener;
 use tower_http::trace::DefaultOnResponse;
 use tracing::{info, info_span};
 
-pub async fn build(config: &AppConfig) -> Result<(TcpListener, AppState), anyhow::Error> {
+pub async fn build(config: AppConfig) -> Result<(TcpListener, AppState), anyhow::Error> {
     let db_pool = get_database_pool(&config.database).await?;
 
     sqlx::migrate!().run(&db_pool).await?;
@@ -48,6 +48,7 @@ pub async fn build(config: &AppConfig) -> Result<(TcpListener, AppState), anyhow
     let state = AppState {
         database: db_pool,
         email_client,
+        config
     };
     Ok((listener, state))
 }
@@ -64,7 +65,6 @@ pub async fn get_database_pool(config: &DatabaseConfig) -> Result<PgPool, sqlx::
 
 pub async fn run_until_stopped(
     state: AppState,
-    _config: AppConfig,
     listener: TcpListener,
 ) -> Result<(), anyhow::Error> {
     let router = Router::new()

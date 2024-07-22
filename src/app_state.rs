@@ -1,8 +1,10 @@
 use crate::email_client::EmailClient;
 use sqlx::PgPool;
+use crate::app_config::AppConfig;
 
 #[derive(Debug)]
 pub struct AppState {
+    pub config: AppConfig,
     pub database: PgPool,
     pub email_client: EmailClient,
 }

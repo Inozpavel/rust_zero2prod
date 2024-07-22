@@ -40,9 +40,14 @@ pub async fn subscribe(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", e)))?;
 
-    send_confirmation_email(&subscriber, &app_state.email_client, &token)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", e)))?;
+    send_confirmation_email(
+        &subscriber,
+        &app_state.email_client,
+        &token,
+        &app_state.config.base_url,
+    )
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", e)))?;
 
     info!("New subscription!");
 
@@ -77,11 +82,12 @@ async fn send_confirmation_email(
     subscriber: &Subscriber,
     email_client: &EmailClient,
     confirmation_token: &str,
+    base_url: &str,
 ) -> Result<(), anyhow::Error> {
     let subject = "Welcome!";
     let confirmation_link = format!(
-        "https://my-api.com/subscriptions/confirm?token={}",
-        confirmation_token
+        "{}/subscriptions/confirm?token={}",
+        base_url, confirmation_token
     );
 
     let plain_body = format!(
