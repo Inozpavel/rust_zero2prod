@@ -1,5 +1,3 @@
-#![deny(unused_imports)]
-
 use tracing_subscriber::EnvFilter;
 use zero2prod::app_config::get_app_configuration;
 use zero2prod::startup::{build, run_until_stopped};
