@@ -13,7 +13,6 @@ use serde::Deserialize;
 use sqlx::PgPool;
 use std::sync::Arc;
 use tracing::{error, info};
-use uuid::Uuid;
 
 #[derive(Deserialize, Debug)]
 pub struct SubscribeFormData {
@@ -52,13 +51,12 @@ pub async fn subscribe(
 
 #[tracing::instrument(skip_all)]
 async fn insert_subscriber(pool: &PgPool, subscriber: &Subscriber) -> Result<(), sqlx::Error> {
-    let subscriber_id = Uuid::now_v7();
     sqlx::query!(
         r#"
     INSERT INTO subscriptions (id, name, email, subscribed_at, status)
     VALUES ($1,$2,$3,$4,$5)
     "#,
-        subscriber_id,
+        subscriber.id.as_ref(),
         subscriber.name.as_ref(),
         subscriber.email.as_ref(),
         Utc::now(),

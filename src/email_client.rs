@@ -1,5 +1,6 @@
 use crate::domain::value_objects::SubscriberEmail;
 use serde::Serialize;
+use tracing::info;
 
 #[derive(Debug)]
 pub struct EmailClient {
@@ -38,7 +39,7 @@ impl EmailClient {
             subject: subject.to_string(),
         };
 
-        println!("Email sent: {:?}", request_body);
+        info!("Email sent: {:?}", request_body);
         // self.http_client
         //     .post(&self.url)
         //     .header("X-Postmark-Server-Token", &self.authorization_token)

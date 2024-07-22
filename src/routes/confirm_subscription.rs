@@ -12,6 +12,7 @@ use crate::error::{ApplicationError, RepositoryError};
 pub struct ConfirmSubscriptionQuery {
     token: String,
 }
+#[tracing::instrument(skip_all)]
 pub async fn confirm_subscription(
     State(app_state): State<Arc<AppState>>,
     Query(query): Query<ConfirmSubscriptionQuery>,
@@ -20,12 +21,14 @@ pub async fn confirm_subscription(
 
     if let Some(id) = subscriber_id {
         update_subscriber_confirmation_status(&app_state.database, &id).await?;
+    } else {
+        return Err(ApplicationError::DomainError("Token wasn't found".into()));
     }
 
-    return Err(ApplicationError::DomainError("Token wasn't found".into()));
+    Ok(())
 }
 
-#[tracing::instrument]
+#[tracing::instrument(skip_all)]
 async fn get_subscriber_id_by_token(
     pool: &PgPool,
     token: &str,
@@ -45,7 +48,7 @@ async fn get_subscriber_id_by_token(
     Ok(id)
 }
 
-#[tracing::instrument]
+#[tracing::instrument(skip_all)]
 async fn update_subscriber_confirmation_status(
     pool: &PgPool,
     subscriber_id: &SubscriberId,

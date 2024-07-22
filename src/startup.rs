@@ -70,7 +70,7 @@ pub async fn run_until_stopped(
     let router = Router::new()
         .route("/health", get(|| async {}))
         .route("/subscriptions", post(subscribe))
-        .route("/subscriptions/confirm", post(confirm_subscription))
+        .route("/subscriptions/confirm", get(confirm_subscription))
         .layer(
             tower_http::trace::TraceLayer::new_for_http()
                 .make_span_with(|req: &Request<Body>| {
@@ -79,7 +79,7 @@ pub async fn run_until_stopped(
                         .get("x-request-id")
                         .map(|v| v.to_str().unwrap_or("invalid UTF-8"))
                         .unwrap_or("None");
-                    info_span!("http-request", method = ?req.method(), uri = ?req.uri(), ?req_id)
+                    info_span!("http-request", method = ?req.method(), uri = ?req.uri().path(), ?req_id)
                 })
                 .on_response(DefaultOnResponse::new().level(tracing::Level::INFO)),
         )
