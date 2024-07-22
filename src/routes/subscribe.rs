@@ -11,7 +11,7 @@ use axum::Form;
 use chrono::Utc;
 use rand::{thread_rng, Rng};
 use serde::Deserialize;
-use sqlx::{Connection, Executor, PgConnection};
+use sqlx::{Executor, Postgres};
 use std::sync::Arc;
 use tracing::{error, info};
 
@@ -35,9 +35,9 @@ pub async fn subscribe(
     let token = generate_subscription_token();
 
     let transaction = &mut app_state.database.begin().await?;
-    insert_subscriber(&mut *transaction, &subscriber).await?;
+    insert_subscriber(&mut **transaction, &subscriber).await?;
 
-    store_token(&mut *transaction, &subscriber, &token).await?;
+    store_token(&mut **transaction, &subscriber, &token).await?;
 
     send_confirmation_email(
         &subscriber,
@@ -55,7 +55,7 @@ pub async fn subscribe(
 
 #[tracing::instrument(skip_all)]
 async fn insert_subscriber(
-    conn: &mut PgConnection,
+    executor: impl Executor<'_, Database = Postgres>,
     subscriber: &Subscriber,
 ) -> Result<(), sqlx::Error> {
     sqlx::query!(
@@ -69,7 +69,7 @@ async fn insert_subscriber(
         Utc::now(),
         ConfirmationStatus::PendingConfirmation.as_ref()
     )
-    .execute(conn)
+    .execute(executor)
     .await
     .map_err(|e| {
         error!("Failed to execute query {:?}", e);
@@ -80,7 +80,7 @@ async fn insert_subscriber(
 }
 
 async fn store_token(
-    conn: &mut PgConnection,
+    executor: impl Executor<'_, Database = Postgres>,
     subscriber: &Subscriber,
     token: &str,
 ) -> Result<(), sqlx::Error> {
@@ -92,7 +92,7 @@ async fn store_token(
         &subscriber.id.as_ref().to_string(),
         token
     )
-    .execute(conn)
+    .execute(executor)
     .await?;
 
     Ok(())
