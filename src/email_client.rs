@@ -38,17 +38,18 @@ impl EmailClient {
             subject: subject.to_string(),
         };
 
-        self.http_client
-            .post(&self.url)
-            .header("X-Postmark-Server-Token", &self.authorization_token)
-            .json(&request_body)
-            .send()
-            .await?;
+        println!("Email sent: {:?}", request_body);
+        // self.http_client
+        //     .post(&self.url)
+        //     .header("X-Postmark-Server-Token", &self.authorization_token)
+        //     .json(&request_body)
+        //     .send()
+        //     .await?;
         Ok(())
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 struct RequestBody {
     from: String,
     to: String,

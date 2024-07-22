@@ -1,10 +1,16 @@
 use uuid::Uuid;
 
+#[derive(Debug, Eq, PartialEq)]
 pub struct SubscriberId(Uuid);
 
 impl SubscriberId {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn parse(s: &str) -> Result<Self, String> {
+        let id = Uuid::parse_str(s).map_err(|_| format!("Incorrect subscriber id {}", s))?;
+        Ok(Self(id))
     }
 }
 
