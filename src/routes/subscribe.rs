@@ -4,13 +4,14 @@ use crate::domain::value_objects::{
     ConfirmationStatus, SubscriberEmail, SubscriberId, SubscriberName,
 };
 use crate::email_client::EmailClient;
+use crate::error::ApplicationError;
+use crate::error::RepositoryError::DomainError;
 use axum::extract::State;
-use axum::http::StatusCode;
 use axum::Form;
 use chrono::Utc;
 use rand::{thread_rng, Rng};
 use serde::Deserialize;
-use sqlx::PgPool;
+use sqlx::{Connection, Executor, PgConnection};
 use std::sync::Arc;
 use tracing::{error, info};
 
@@ -24,21 +25,19 @@ pub struct SubscribeFormData {
 pub async fn subscribe(
     app_state: State<Arc<AppState>>,
     Form(form): Form<SubscribeFormData>,
-) -> Result<(), (StatusCode, String)> {
+) -> Result<(), ApplicationError<'static>> {
     let subscriber = Subscriber {
         id: SubscriberId::new(),
-        email: SubscriberEmail::parse(form.email).map_err(|e| (StatusCode::BAD_REQUEST, e))?,
-        name: SubscriberName::parse(form.name).map_err(|e| (StatusCode::BAD_REQUEST, e))?,
+        email: SubscriberEmail::parse(form.email).map_err(DomainError)?,
+        name: SubscriberName::parse(form.name).map_err(DomainError)?,
     };
 
     let token = generate_subscription_token();
-    insert_subscriber(&app_state.database, &subscriber)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", e)))?;
 
-    store_token(&app_state.database, &subscriber, &token)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", e)))?;
+    let transaction = &mut app_state.database.begin().await?;
+    insert_subscriber(&mut *transaction, &subscriber).await?;
+
+    store_token(&mut *transaction, &subscriber, &token).await?;
 
     send_confirmation_email(
         &subscriber,
@@ -47,7 +46,7 @@ pub async fn subscribe(
         &app_state.config.base_url,
     )
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", e)))?;
+    .map_err(|e| DomainError(format!("{}", e)))?;
 
     info!("New subscription!");
 
@@ -55,7 +54,10 @@ pub async fn subscribe(
 }
 
 #[tracing::instrument(skip_all)]
-async fn insert_subscriber(pool: &PgPool, subscriber: &Subscriber) -> Result<(), sqlx::Error> {
+async fn insert_subscriber(
+    conn: &mut PgConnection,
+    subscriber: &Subscriber,
+) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
     INSERT INTO subscriptions (id, name, email, subscribed_at, status)
@@ -67,12 +69,31 @@ async fn insert_subscriber(pool: &PgPool, subscriber: &Subscriber) -> Result<(),
         Utc::now(),
         ConfirmationStatus::PendingConfirmation.as_ref()
     )
-    .execute(pool)
+    .execute(conn)
     .await
     .map_err(|e| {
         error!("Failed to execute query {:?}", e);
         e
     })?;
+
+    Ok(())
+}
+
+async fn store_token(
+    conn: &mut PgConnection,
+    subscriber: &Subscriber,
+    token: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        r#"
+    INSERT INTO subscription_tokens (subscriber_id, subscription_token)
+    VALUES ($1, $2)
+    "#,
+        &subscriber.id.as_ref().to_string(),
+        token
+    )
+    .execute(conn)
+    .await?;
 
     Ok(())
 }
@@ -113,23 +134,4 @@ fn generate_subscription_token() -> String {
         .map(char::from)
         .take(25)
         .collect()
-}
-
-async fn store_token(
-    pool: &PgPool,
-    subscriber: &Subscriber,
-    token: &str,
-) -> Result<(), sqlx::Error> {
-    sqlx::query!(
-        r#"
-    INSERT INTO subscription_tokens (subscriber_id, subscription_token)
-    VALUES ($1, $2)
-    "#,
-        &subscriber.id.as_ref().to_string(),
-        token
-    )
-    .execute(pool)
-    .await?;
-
-    Ok(())
 }
