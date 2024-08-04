@@ -2,6 +2,7 @@ use crate::app_config::{AppConfig, DatabaseConfig};
 use crate::app_state::AppState;
 use crate::domain::value_objects::SubscriberEmail;
 use crate::email_client::EmailClient;
+use crate::infrastructure::sqlx_postgres_repository::SqlxPostgresRepository;
 use crate::routes::confirm_subscription::confirm_subscription;
 use crate::routes::subscribe::subscribe;
 use anyhow::anyhow;
@@ -45,8 +46,10 @@ pub async fn build(config: AppConfig) -> Result<(TcpListener, AppState), anyhow:
         info!("Listening http://{}", listener.local_addr()?);
     }
 
+    let repository = SqlxPostgresRepository::new(db_pool);
+
     let state = AppState {
-        database: db_pool,
+        repository: repository,
         email_client,
         config,
     };

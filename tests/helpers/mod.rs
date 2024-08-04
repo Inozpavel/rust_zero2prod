@@ -5,6 +5,7 @@ use std::sync::Once;
 use tracing_subscriber::EnvFilter;
 use uuid::Uuid;
 use zero2prod::app_config::{get_app_configuration, AppConfig};
+use zero2prod::infrastructure::sqlx_postgres_repository::SqlxPostgresRepository;
 use zero2prod::startup::{build, get_database_pool};
 
 pub struct TestApp {
@@ -40,7 +41,7 @@ pub async fn spawn_app() -> Result<TestApp, anyhow::Error> {
 
     let given_port = listener.local_addr()?.port();
 
-    let pool = state.database.clone();
+    let pool = state.repository.inner().clone();
     _ = tokio::task::spawn(zero2prod::startup::run_until_stopped(state, listener));
 
     let base_address = format!("http://127.0.0.1:{}", given_port);
