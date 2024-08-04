@@ -49,7 +49,7 @@ pub async fn build(config: AppConfig) -> Result<(TcpListener, AppState), anyhow:
     let repository = SqlxPostgresRepository::new(db_pool);
 
     let state = AppState {
-        repository: repository,
+        repository,
         email_client,
         config,
     };
@@ -82,7 +82,9 @@ pub async fn run_until_stopped(
                         .get("x-request-id")
                         .map(|v| v.to_str().unwrap_or("invalid UTF-8"))
                         .unwrap_or("None");
-                    info_span!("http-request", method = ?req.method(), uri = ?req.uri().path(), ?req_id)
+
+                    let span_name = format!("{} {}", req.method().as_str(), req.uri().path());
+                    info_span!("http-request", method = ?req.method(), uri = ?req.uri().path(), ?req_id, otel.name=span_name)
                 })
                 .on_response(DefaultOnResponse::new().level(tracing::Level::INFO)),
         )
