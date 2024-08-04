@@ -1,19 +1,15 @@
 use crate::app_state::AppState;
 use crate::domain::entities::subscriber::Subscriber;
-use crate::domain::value_objects::{
-    ConfirmationStatus, SubscriberEmail, SubscriberId, SubscriberName,
-};
+use crate::domain::value_objects::{SubscriberEmail, SubscriberId, SubscriberName};
 use crate::email_client::EmailClient;
 use crate::error::ApplicationError;
 use crate::error::RepositoryError::DomainError;
 use axum::extract::State;
 use axum::Form;
-use chrono::Utc;
 use rand::{thread_rng, Rng};
 use serde::Deserialize;
-use sqlx::{Executor, Postgres};
 use std::sync::Arc;
-use tracing::{error, info};
+use tracing::info;
 
 #[derive(Deserialize, Debug)]
 pub struct SubscribeFormData {

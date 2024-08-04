@@ -1,13 +1,11 @@
 use std::fmt::Debug;
-use std::future::Future;
 
 use crate::domain::entities::subscriber::Subscriber;
 use crate::domain::value_objects::ConfirmationStatus;
 use crate::domain::value_objects::SubscriberId;
 use crate::error::RepositoryError;
-use async_trait::async_trait;
 use chrono::Utc;
-use sqlx::{Executor, PgPool, Postgres, Transaction};
+use sqlx::{PgPool, Postgres, Transaction};
 use tracing::error;
 
 #[derive(Debug, Clone)]

@@ -5,7 +5,6 @@ use std::sync::Once;
 use tracing_subscriber::EnvFilter;
 use uuid::Uuid;
 use zero2prod::app_config::{get_app_configuration, AppConfig};
-use zero2prod::infrastructure::sqlx_postgres_repository::SqlxPostgresRepository;
 use zero2prod::startup::{build, get_database_pool};
 
 pub struct TestApp {
