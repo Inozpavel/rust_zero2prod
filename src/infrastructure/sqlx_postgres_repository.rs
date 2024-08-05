@@ -5,7 +5,7 @@ use crate::domain::value_objects::ConfirmationStatus;
 use crate::domain::value_objects::SubscriberId;
 use crate::error::RepositoryError;
 use chrono::Utc;
-use sqlx::{PgPool, Postgres, Transaction};
+use sqlx::{PgPool, Postgres, Row, Transaction};
 use tracing::error;
 
 #[derive(Debug, Clone)]
@@ -32,8 +32,19 @@ impl SqlxPostgresRepository {
             token
         )
         .fetch_optional(&self.0)
-        .await?
+        .await
+        .map_err(|e| {
+            error!("Failed to execute query: {:?}", e);
+            e
+        })?
         .map(|x| x.subscriber_id);
+        //
+        // let id: Option<(String,)> = sqlx::query_as(
+        //     "SELECT subscriber_id,a FROM subscription_tokens WHERE subscription_token=$1",
+        // )
+        // .bind(token)
+        // .fetch_optional(&self.0)
+        // .await?;
 
         let id = id
             .map(|id| SubscriberId::parse(&id).map_err(RepositoryError::DomainError))

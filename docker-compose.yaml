@@ -1,13 +1,14 @@
 services:
   postgres:
     image: postgres
+    restart: always
+    container_name: postgres
     ports:
       - 5432:5432
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: newsletter
-    restart: always
 
   zero2prod:
     image: zero2prod-ubuntu-2-layers-bookworm-slim
@@ -19,8 +20,8 @@ services:
 
   jaeger:
     image: jaegertracing/all-in-one
+    restart: always
     container_name: jaeger
-    restart: on-failure
     ports:
       - 5775:5775/udp
       - 6831:6831/udp

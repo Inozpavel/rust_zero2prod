@@ -18,8 +18,7 @@ use sqlx::PgPool;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::net::TcpListener;
-use tower_http::trace::DefaultOnResponse;
-use tracing::{info, info_span};
+use tracing::{error, info, info_span};
 
 pub async fn build(config: AppConfig) -> Result<(TcpListener, AppState), anyhow::Error> {
     let db_pool = get_database_pool(&config.database).await?;
@@ -86,8 +85,8 @@ pub async fn run_until_stopped(
                     let span_name = format!("{} {}", req.method().as_str(), req.uri().path());
                     info_span!("http-request", method = ?req.method(), uri = ?req.uri().path(), ?req_id, otel.name=span_name)
                 })
-                .on_response(DefaultOnResponse::new().level(tracing::Level::INFO)),
         )
+        .layer(axum::middleware::from_fn(log_error_response))
         .layer(axum::middleware::from_fn(override_code))
         .layer(tower_http::request_id::PropagateRequestIdLayer::x_request_id())
         .layer(tower_http::request_id::SetRequestIdLayer::x_request_id(
@@ -108,6 +107,17 @@ async fn override_code(req: Request, next: Next) -> impl IntoResponse {
 
     if *status == StatusCode::UNPROCESSABLE_ENTITY {
         *status = StatusCode::BAD_REQUEST;
+    }
+
+    response
+}
+async fn log_error_response(req: Request, next: Next) -> impl IntoResponse {
+    let mut response = next.run(req).await;
+
+    let status = response.status_mut();
+
+    if status.as_u16() >= 500 {
+        error!("Processing error: {:?}", response.body())
     }
 
     response
