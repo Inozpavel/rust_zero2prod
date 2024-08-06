@@ -3,9 +3,11 @@ use std::fmt::Debug;
 use crate::domain::entities::subscriber::Subscriber;
 use crate::domain::value_objects::SubscriberId;
 use crate::domain::value_objects::{ConfirmationStatus, SubscriberEmail};
-use crate::error::{DomainError, RepositoryError};
+use crate::error::RepositoryError;
 use chrono::Utc;
-use sqlx::{Either, PgPool, Postgres, Row, Transaction};
+use sqlx::PgPool;
+use sqlx::Postgres;
+use sqlx::Transaction;
 use tracing::error;
 
 #[derive(Debug, Clone)]
@@ -23,7 +25,7 @@ impl SqlxPostgresRepository {
 
 impl SqlxPostgresRepository {
     #[tracing::instrument(skip_all)]
-    pub async fn begin_transaction(&self) -> Result<Transaction<Postgres>, sqlx::Error> {
+    pub async fn begin_transaction(&self) -> Result<Transaction<Postgres>, RepositoryError> {
         let transaction = self.0.begin().await.unwrap();
         Ok(transaction)
     }
@@ -59,16 +61,13 @@ impl SqlxPostgresRepository {
         Ok(id)
     }
 
-    pub async fn get_confirmed_emails(
-        &self,
-    ) -> Result<Vec<SubscriberEmail>, Either<sqlx::Error, DomainError>> {
+    pub async fn get_confirmed_emails(&self) -> Result<Vec<SubscriberEmail>, RepositoryError> {
         let emails_db = sqlx::query!(
             "SELECT email FROM subscriptions WHERE status=$1",
             ConfirmationStatus::Confirmed.as_ref()
         )
         .fetch_all(&self.0)
-        .await
-        .map_err(Either::Left)?
+        .await?
         .into_iter()
         .map(|x| x.email)
         .collect::<Vec<_>>();
@@ -76,8 +75,7 @@ impl SqlxPostgresRepository {
         let emails = emails_db
             .into_iter()
             .map(SubscriberEmail::parse)
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(Either::Right)?;
+            .collect::<Result<Vec<_>, _>>()?;
 
         Ok(emails)
     }
@@ -103,7 +101,7 @@ impl SqlxPostgresRepository {
         &self,
         transaction: &mut Transaction<'_, Postgres>,
         subscriber: &Subscriber,
-    ) -> Result<(), sqlx::Error> {
+    ) -> Result<(), RepositoryError> {
         sqlx::query!(
             r#"
         INSERT INTO subscriptions (id, name, email, subscribed_at, status)
@@ -131,7 +129,7 @@ impl SqlxPostgresRepository {
         transaction: &mut Transaction<'_, Postgres>,
         subscriber: &Subscriber,
         token: &str,
-    ) -> Result<(), sqlx::Error> {
+    ) -> Result<(), RepositoryError> {
         sqlx::query!(
             r#"
         INSERT INTO subscription_tokens (subscriber_id, subscription_token)

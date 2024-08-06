@@ -4,6 +4,7 @@ use crate::domain::value_objects::SubscriberEmail;
 use crate::email_client::EmailClient;
 use crate::infrastructure::sqlx_postgres_repository::SqlxPostgresRepository;
 use crate::routes::confirm_subscription::confirm_subscription;
+use crate::routes::publish_newsletter::publish_newsletter;
 use crate::routes::subscribe::subscribe;
 use anyhow::anyhow;
 use axum::body::Body;
@@ -73,7 +74,7 @@ pub async fn run_until_stopped(
         .route("/health", get(|| async {}))
         .route("/subscriptions", post(subscribe))
         .route("/subscriptions/confirm", get(confirm_subscription))
-        .route("/newsletter", post(confirm_subscription))
+        .route("/newsletter", post(publish_newsletter))
         .layer(
             tower_http::trace::TraceLayer::new_for_http()
                 .make_span_with(|req: &Request<Body>| {

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-axum = "0.7.5"
+axum = { version = "0.7.5", features = ["macros"] }
 tokio = { version = "1.38.1", features = ["net", "rt-multi-thread", "macros", "rt"] }
 #thiserror = "1.0.63"
 anyhow = "1.0.86"

@@ -2,7 +2,6 @@ use crate::domain::value_objects::SubscriberEmail;
 use serde::Serialize;
 use tracing::info;
 
-#[derive(Debug)]
 pub struct EmailClient {
     http_client: reqwest::Client,
     url: String,

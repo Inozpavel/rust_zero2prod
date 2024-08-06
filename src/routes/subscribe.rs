@@ -7,7 +7,6 @@ use axum::extract::State;
 use axum::Form;
 use rand::{thread_rng, Rng};
 use serde::Deserialize;
-use std::borrow::Cow;
 use std::sync::Arc;
 use tracing::info;
 
@@ -41,7 +40,7 @@ pub async fn subscribe(
             .store_token_tx(&mut transaction, &subscriber, &token)
             .await?;
 
-        transaction.commit().await?;
+        transaction.commit().await.map_err(RepositoryError::from)?;
     }
 
     send_confirmation_email(
