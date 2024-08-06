@@ -2,12 +2,12 @@ use crate::app_state::AppState;
 use crate::domain::entities::subscriber::Subscriber;
 use crate::domain::value_objects::{SubscriberEmail, SubscriberId, SubscriberName};
 use crate::email_client::EmailClient;
-use crate::error::ApplicationError;
-use crate::error::RepositoryError::DomainError;
+use crate::error::{ApplicationError, DomainError, RepositoryError};
 use axum::extract::State;
 use axum::Form;
 use rand::{thread_rng, Rng};
 use serde::Deserialize;
+use std::borrow::Cow;
 use std::sync::Arc;
 use tracing::info;
 
@@ -21,11 +21,11 @@ pub struct SubscribeFormData {
 pub async fn subscribe(
     State(app_state): State<Arc<AppState>>,
     Form(form): Form<SubscribeFormData>,
-) -> Result<(), ApplicationError<'static>> {
+) -> Result<(), ApplicationError> {
     let subscriber = Subscriber {
         id: SubscriberId::new(),
-        email: SubscriberEmail::parse(form.email).map_err(DomainError)?,
-        name: SubscriberName::parse(form.name).map_err(DomainError)?,
+        email: SubscriberEmail::parse(form.email)?,
+        name: SubscriberName::parse(form.name)?,
     };
     let token = generate_subscription_token();
 
@@ -51,7 +51,7 @@ pub async fn subscribe(
         &app_state.config.base_url,
     )
     .await
-    .map_err(|e| DomainError(format!("{}", e)))?;
+    .map_err(|e| DomainError::from(format!("{}", e)))?;
 
     info!("New subscription!");
 

@@ -1,11 +1,11 @@
 use std::fmt::Debug;
 
 use crate::domain::entities::subscriber::Subscriber;
-use crate::domain::value_objects::ConfirmationStatus;
 use crate::domain::value_objects::SubscriberId;
-use crate::error::RepositoryError;
+use crate::domain::value_objects::{ConfirmationStatus, SubscriberEmail};
+use crate::error::{DomainError, RepositoryError};
 use chrono::Utc;
-use sqlx::{PgPool, Postgres, Row, Transaction};
+use sqlx::{Either, PgPool, Postgres, Row, Transaction};
 use tracing::error;
 
 #[derive(Debug, Clone)]
@@ -22,6 +22,12 @@ impl SqlxPostgresRepository {
 }
 
 impl SqlxPostgresRepository {
+    #[tracing::instrument(skip_all)]
+    pub async fn begin_transaction(&self) -> Result<Transaction<Postgres>, sqlx::Error> {
+        let transaction = self.0.begin().await.unwrap();
+        Ok(transaction)
+    }
+
     #[tracing::instrument(skip_all)]
     pub async fn get_subscriber_id_by_token(
         &self,
@@ -47,16 +53,33 @@ impl SqlxPostgresRepository {
         // .await?;
 
         let id = id
-            .map(|id| SubscriberId::parse(&id).map_err(RepositoryError::DomainError))
+            .map(|id| SubscriberId::parse(&id).map_err(RepositoryError::Domain))
             .transpose()?;
 
         Ok(id)
     }
 
-    #[tracing::instrument(skip_all)]
-    pub async fn begin_transaction(&self) -> Result<Transaction<Postgres>, sqlx::Error> {
-        let transaction = self.0.begin().await.unwrap();
-        Ok(transaction)
+    pub async fn get_confirmed_emails(
+        &self,
+    ) -> Result<Vec<SubscriberEmail>, Either<sqlx::Error, DomainError>> {
+        let emails_db = sqlx::query!(
+            "SELECT email FROM subscriptions WHERE status=$1",
+            ConfirmationStatus::Confirmed.as_ref()
+        )
+        .fetch_all(&self.0)
+        .await
+        .map_err(Either::Left)?
+        .into_iter()
+        .map(|x| x.email)
+        .collect::<Vec<_>>();
+
+        let emails = emails_db
+            .into_iter()
+            .map(SubscriberEmail::parse)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(Either::Right)?;
+
+        Ok(emails)
     }
 
     #[tracing::instrument(skip_all)]

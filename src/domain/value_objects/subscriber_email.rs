@@ -1,12 +1,14 @@
+use crate::error::DomainError;
+
 #[derive(Debug, Eq, PartialEq)]
 pub struct SubscriberEmail(String);
 
 impl SubscriberEmail {
-    pub fn parse(s: String) -> Result<Self, String> {
+    pub fn parse(s: String) -> Result<Self, DomainError> {
         if validator::ValidateEmail::validate_email(&s) {
             Ok(Self(s))
         } else {
-            Err(format!("{} is not valid email", s))
+            Err(format!("{} is not valid email", s).into())
         }
     }
 }

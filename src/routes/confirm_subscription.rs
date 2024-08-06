@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
-use crate::app_state::AppState;
-use crate::error::ApplicationError;
 use axum::extract::{Query, State};
 use serde::Deserialize;
+
+use crate::app_state::AppState;
+use crate::error::{ApplicationError, DomainError};
 
 #[derive(Deserialize)]
 pub struct ConfirmSubscriptionQuery {
@@ -13,7 +14,7 @@ pub struct ConfirmSubscriptionQuery {
 pub async fn confirm_subscription(
     State(app_state): State<Arc<AppState>>,
     Query(query): Query<ConfirmSubscriptionQuery>,
-) -> Result<(), ApplicationError<'static>> {
+) -> Result<(), ApplicationError> {
     let subscriber_id = app_state
         .repository
         .get_subscriber_id_by_token(&query.token)
@@ -25,7 +26,7 @@ pub async fn confirm_subscription(
             .update_subscriber_confirmation_status(&id)
             .await?;
     } else {
-        return Err(ApplicationError::DomainError("Token wasn't found".into()));
+        return Err(DomainError::from("Token wasn't found").into());
     }
 
     Ok(())

@@ -1,3 +1,4 @@
+use crate::error::DomainError;
 use uuid::Uuid;
 
 #[derive(Debug, Eq, PartialEq)]
@@ -8,7 +9,7 @@ impl SubscriberId {
         Self::default()
     }
 
-    pub fn parse(s: &str) -> Result<Self, String> {
+    pub fn parse(s: &str) -> Result<Self, DomainError> {
         let id = Uuid::parse_str(s).map_err(|_| format!("Incorrect subscriber id {}", s))?;
         Ok(Self(id))
     }

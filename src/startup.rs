@@ -73,6 +73,7 @@ pub async fn run_until_stopped(
         .route("/health", get(|| async {}))
         .route("/subscriptions", post(subscribe))
         .route("/subscriptions/confirm", get(confirm_subscription))
+        .route("/newsletter", post(confirm_subscription))
         .layer(
             tower_http::trace::TraceLayer::new_for_http()
                 .make_span_with(|req: &Request<Body>| {

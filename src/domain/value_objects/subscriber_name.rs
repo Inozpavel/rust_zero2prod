@@ -1,8 +1,10 @@
+use crate::error::DomainError;
+
 #[derive(Eq, PartialEq, Debug)]
 pub struct SubscriberName(String);
 
 impl SubscriberName {
-    pub fn parse(s: String) -> Result<Self, String> {
+    pub fn parse(s: String) -> Result<Self, DomainError> {
         let is_empty_or_whitespace = s.trim().is_empty();
 
         let is_too_long = s.len() > 256;
@@ -12,7 +14,7 @@ impl SubscriberName {
         let contains_forbidden_char = s.chars().any(|c| FORBIDDEN_CHARS.contains(&c));
 
         if is_empty_or_whitespace || is_too_long || contains_forbidden_char {
-            return Err(format!("{} is not valid subscriber name", s));
+            return Err(format!("{} is not valid subscriber name", s).into());
         }
         Ok(Self(s))
     }
