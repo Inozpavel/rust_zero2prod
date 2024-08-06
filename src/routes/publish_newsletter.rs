@@ -1,5 +1,6 @@
 use crate::app_state::AppState;
-use crate::error::{ApplicationError, InternalLogicError};
+use crate::domain::value_objects::SubscriberEmail;
+use crate::error::{ApplicationError, DomainError, InternalLogicError};
 use axum::extract::State;
 use axum::Json;
 use serde::Deserialize;
@@ -24,16 +25,26 @@ pub async fn publish_newsletter(
     let emails = app_state.repository.get_confirmed_emails().await?;
 
     for email in emails {
-        app_state
-            .email_client
-            .send(
-                &email,
-                &body_data.title,
-                &body_data.content.html_content,
-                &body_data.content.text_content,
-            )
-            .await
-            .map_err(InternalLogicError::from)?;
+        match email {
+            Ok(email) => {
+                app_state
+                    .email_client
+                    .send(
+                        &email,
+                        &body_data.title,
+                        &body_data.content.html_content,
+                        &body_data.content.text_content,
+                    )
+                    .await
+                    .map_err(InternalLogicError::from)?;
+            }
+            Err(error) => {
+                tracing::warn!(
+                    ?error,
+                    "Skipped confirmed subscriber with invalid stored data",
+                )
+            }
+        }
     }
     Ok(())
 }

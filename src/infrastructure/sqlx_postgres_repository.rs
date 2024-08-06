@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use crate::domain::entities::subscriber::Subscriber;
 use crate::domain::value_objects::SubscriberId;
 use crate::domain::value_objects::{ConfirmationStatus, SubscriberEmail};
-use crate::error::RepositoryError;
+use crate::error::{DomainError, RepositoryError};
 use chrono::Utc;
 use sqlx::PgPool;
 use sqlx::Postgres;
@@ -61,21 +61,18 @@ impl SqlxPostgresRepository {
         Ok(id)
     }
 
-    pub async fn get_confirmed_emails(&self) -> Result<Vec<SubscriberEmail>, RepositoryError> {
-        let emails_db = sqlx::query!(
+    pub async fn get_confirmed_emails(
+        &self,
+    ) -> Result<Vec<Result<SubscriberEmail, DomainError>>, RepositoryError> {
+        let emails = sqlx::query!(
             "SELECT email FROM subscriptions WHERE status=$1",
             ConfirmationStatus::Confirmed.as_ref()
         )
         .fetch_all(&self.0)
         .await?
         .into_iter()
-        .map(|x| x.email)
+        .map(|x| SubscriberEmail::parse(x.email))
         .collect::<Vec<_>>();
-
-        let emails = emails_db
-            .into_iter()
-            .map(SubscriberEmail::parse)
-            .collect::<Result<Vec<_>, _>>()?;
 
         Ok(emails)
     }
