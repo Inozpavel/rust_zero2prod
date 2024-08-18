@@ -3,6 +3,7 @@ use crate::app_state::AppState;
 use crate::domain::value_objects::SubscriberEmail;
 use crate::email_client::EmailClient;
 use crate::infrastructure::sqlx_postgres_repository::SqlxPostgresRepository;
+use crate::middlewares::basic_auth::basic_auth;
 use crate::routes::confirm_subscription::confirm_subscription;
 use crate::routes::publish_newsletter::publish_newsletter;
 use crate::routes::subscribe::subscribe;
@@ -70,11 +71,13 @@ pub async fn run_until_stopped(
     state: AppState,
     listener: TcpListener,
 ) -> Result<(), anyhow::Error> {
+    let state = Arc::new(state);
     let router = Router::new()
+        .route("/newsletter", post(publish_newsletter))
+        .layer(axum::middleware::from_fn_with_state(state.clone(), basic_auth))
         .route("/health", get(|| async {}))
         .route("/subscriptions", post(subscribe))
         .route("/subscriptions/confirm", get(confirm_subscription))
-        .route("/newsletter", post(publish_newsletter))
         .layer(
             tower_http::trace::TraceLayer::new_for_http()
                 .make_span_with(|req: &Request<Body>| {
@@ -95,7 +98,7 @@ pub async fn run_until_stopped(
             tower_http::request_id::MakeRequestUuid,
         ))
         .fallback(|| async { (StatusCode::NOT_FOUND, "Route wasn't found") })
-        .with_state(Arc::new(state))
+        .with_state(state)
         .into_make_service();
 
     axum::serve(listener, router).await?;
@@ -115,7 +118,6 @@ async fn override_code(req: Request, next: Next) -> impl IntoResponse {
 }
 async fn log_error_response(req: Request, next: Next) -> impl IntoResponse {
     let mut response = next.run(req).await;
-
     let status = response.status_mut();
 
     if status.as_u16() >= 500 {

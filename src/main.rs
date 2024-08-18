@@ -31,8 +31,7 @@ async fn main() -> Result<(), anyhow::Error> {
         )
         .with_batch_config(BatchConfig::default())
         .with_exporter(opentelemetry_otlp::new_exporter().tonic())
-        .install_batch(runtime::Tokio)
-        .unwrap();
+        .install_batch(runtime::Tokio)?;
 
     global::set_tracer_provider(provider.clone());
 

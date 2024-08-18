@@ -18,6 +18,7 @@ pub enum ApplicationError {
     RepositoryError(RepositoryError),
     InternalLogicDomainError(InternalLogicDomainError),
     InternalLogicError(InternalLogicError),
+    AuthError(anyhow::Error),
     DomainError(DomainError),
 }
 
@@ -56,6 +57,7 @@ impl IntoResponse for ApplicationError {
             e @ ApplicationError::InternalLogicError(..) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, to_json_error(e))
             }
+            e @ ApplicationError::AuthError(..) => (StatusCode::UNAUTHORIZED, to_json_error(e)),
         }
         .into_response()
     }

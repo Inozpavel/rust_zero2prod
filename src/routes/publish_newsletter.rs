@@ -1,6 +1,5 @@
 use crate::app_state::AppState;
-use crate::domain::value_objects::SubscriberEmail;
-use crate::error::{ApplicationError, DomainError, InternalLogicError};
+use crate::error::{ApplicationError, InternalLogicError};
 use axum::extract::State;
 use axum::Json;
 use serde::Deserialize;

@@ -4,5 +4,6 @@ pub mod domain;
 pub mod email_client;
 pub mod error;
 pub mod infrastructure;
+pub mod middlewares;
 pub mod routes;
 pub mod startup;

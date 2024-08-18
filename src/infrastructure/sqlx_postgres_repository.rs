@@ -1,8 +1,8 @@
 use std::fmt::Debug;
 
 use crate::domain::entities::subscriber::Subscriber;
-use crate::domain::value_objects::SubscriberId;
 use crate::domain::value_objects::{ConfirmationStatus, SubscriberEmail};
+use crate::domain::value_objects::{PasswordHash, SubscriberId};
 use crate::error::{DomainError, RepositoryError};
 use chrono::Utc;
 use sqlx::PgPool;
@@ -139,5 +139,24 @@ impl SqlxPostgresRepository {
         .await?;
 
         Ok(())
+    }
+
+    pub async fn user_by_credentials_exists(
+        &self,
+        username: &str,
+        password_hash: &PasswordHash,
+    ) -> Result<bool, RepositoryError> {
+        sqlx::query!(
+            r#"
+        SELECT * FROM users
+        WHERE username=$1 AND password_hash=$2
+        "#,
+            username,
+            password_hash.as_ref()
+        )
+        .fetch_optional(&self.0)
+        .await
+        .map(|r| r.is_some())
+        .map_err(RepositoryError::Database)
     }
 }
